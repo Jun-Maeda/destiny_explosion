@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>destiny_explosion</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+</head>
+<body>
+<h1 id="my-title">ここが書き換わります</h1>
+    <div id="result"></div>
+
+    <script type="py">
+        from pyscript import document
+
+        # IDを指定して要素を取得
+        title_element = document.querySelector("#my-title")
+        # テキストを書き換える
+        title_element.innerText = "Pythonでタイトルを変更しました！"
+
+        # 別の要素に計算結果を入れる
+        result_div = document.querySelector("#result")
+        x = 10
+        y = 20
+        result_div.innerHTML = f"<b>{x} + {y} = {x + y}</b>"
+    </script>
+</body>
+</html>
