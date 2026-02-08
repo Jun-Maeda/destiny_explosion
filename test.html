@@ -1,53 +1,179 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyScript × Bootstrap</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vuetify 宝探しゲーム</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/@mdi/font@7.x/css/materialdesignicons.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/vuetify@3.5.2/dist/vuetify.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vuetify@3.5.2/dist/vuetify.min.js"></script>
+    <style>
+      .v-card {
+        transition: transform 0.2s ease-in-out;
+      }
+      .v-card:hover:not(.v-card--disabled) {
+        transform: scale(1.05);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <v-app v-if="isReady">
+        <v-main class="bg-blue-grey-darken-4">
+          <v-container class="text-center text-white">
+            <h1 class="text-h3 mb-6 pt-10 font-weight-bold">宝探しゲーム</h1>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-</head>
+            <v-alert
+              v-if="gameOver"
+              type="error"
+              variant="elevated"
+              class="mb-5 mx-auto"
+              max-width="600"
+            >
+              ドカーン！爆弾でした。ゲームオーバー！
+            </v-alert>
+            <v-alert
+              v-else-if="winCount === 3"
+              type="success"
+              variant="elevated"
+              class="mb-5 mx-auto"
+              max-width="600"
+            >
+              おめでとう！すべてのお宝を発見しました！
+            </v-alert>
+            <v-alert
+              v-else
+              type="info"
+              variant="outlined"
+              class="mb-5 mx-auto text-white"
+              max-width="600"
+            >
+              4つのうち1つが爆弾です。お宝を3つ見つけてください。
+            </v-alert>
 
-<body class="bg-light">
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">Python計算機</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">Pythonで生成されたデータ：</p>
-                        <div id="output" class="alert alert-info py-2">
-                            読み込み中...
-                        </div>
-                        <button id="my-btn" class="btn btn-success w-100">再挑戦する</button>
-                    </div>
-                </div>
+            <v-row justify="center">
+              <v-col v-for="(box, index) in boxes" :key="index" cols="6" sm="3">
+                <v-card
+                  :disabled="box.opened || gameOver"
+                  @click="openBox(index)"
+                  elevation="8"
+                  class="rounded-lg"
+                >
+                  <v-img
+                    :src="getBoxImage(box)"
+                    height="100%"
+                    cover
+                    class="bg-grey-lighten-2"
+                  >
+                    <template v-slot:placeholder>
+                      <v-row
+                        class="fill-height ma-0"
+                        align="center"
+                        justify="center"
+                      >
+                        <v-progress-circular
+                          indeterminate
+                          color="grey-lighten-5"
+                        ></v-progress-circular>
+                      </v-row>
+                    </template>
+                  </v-img>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <v-btn
+              v-if="gameOver || winCount === 3"
+              color="amber-darken-3"
+              size="x-large"
+              class="mt-10 font-weight-bold"
+              @click="resetGame"
+            >
+              もう一度遊ぶ
+            </v-btn>
+
+            <div class="mt-5 text-subtitle-1">
+              見つけたお宝: {{ winCount }} / 3
             </div>
-        </div>
+          </v-container>
+        </v-main>
+      </v-app>
     </div>
 
-    <script type="py">
-        from pyscript import document
-        import random
+    <script>
+      const { createApp, ref, onMounted } = Vue;
+      const { createVuetify } = Vuetify;
 
-        def calculate_random(event=None):
-            # ランダムな数値を計算
-            num = random.randint(1, 100)
-            # Bootstrapを適用したHTMLを流し込む
-            output_div = document.querySelector("#output")
-            output_div.innerHTML = f"ラッキーナンバー: <strong>{num}</strong>"
+      const vuetify = createVuetify();
 
-        # 初回実行
-        calculate_random()
+      createApp({
+        setup() {
+          const isReady = ref(false);
+          const boxes = ref([]);
+          const gameOver = ref(false);
+          const winCount = ref(0);
 
-        # ボタンにイベントを登録
-        btn = document.querySelector("#my-btn")
-        btn.onclick = calculate_random
+          // 画像パスの設定（ご自身のファイル名に合わせて変更してください）
+          const IMG_PATH = {
+            CLOSED: "img/box.png",
+            TREASURE: "img/treasure.png",
+            BOMB: "img/bomb.png",
+          };
+
+          const resetGame = () => {
+            gameOver.value = false;
+            winCount.value = 0;
+            // 1つだけ爆弾（isBomb: true）をランダムに配置
+            const bombIndex = Math.floor(Math.random() * 4);
+            boxes.value = Array.from({ length: 4 }, (_, i) => ({
+              isBomb: i === bombIndex,
+              opened: false,
+            }));
+          };
+
+          const openBox = (index) => {
+            if (gameOver.value || boxes.value[index].opened) return;
+
+            boxes.value[index].opened = true;
+
+            if (boxes.value[index].isBomb) {
+              gameOver.value = true;
+            } else {
+              winCount.value++;
+            }
+          };
+
+          const getBoxImage = (box) => {
+            if (!box.opened) return IMG_PATH.CLOSED;
+            return box.isBomb ? IMG_PATH.BOMB : IMG_PATH.TREASURE;
+          };
+
+          onMounted(() => {
+            resetGame();
+            isReady.value = true;
+          });
+
+          return {
+            isReady,
+            boxes,
+            gameOver,
+            winCount,
+            openBox,
+            resetGame,
+            getBoxImage,
+          };
+        },
+      })
+        .use(vuetify)
+        .mount("#app");
     </script>
-</body>
+  </body>
 </html>
